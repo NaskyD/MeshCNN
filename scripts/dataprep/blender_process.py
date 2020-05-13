@@ -23,10 +23,22 @@ class Process:
     def __init__(self, obj_file, target_faces, export_name):
         assert (bpy.context.selected_objects != []), 'ERROR: no file present in blender context'
         mesh = self.load_obj(obj_file)
+        self.hadLooseGeometry_initialRun = False
+        self.delete_looseGeometry(mesh, "initial_run")
         self.hadDouble_vertices = False
         #self.clean_doubles(mesh)
+        self.hadZeroArea_edges_or_faces = False
+        self.repair_zeroArea_faces(mesh)
         self.simplify(mesh, target_faces)
         self.export_obj(mesh, export_name)
+
+        # In case of again loose geometry after the whole process, export a duplicate without this loose geometry
+        self.hadLooseGeometry_postRun = False
+        self.delete_looseGeometry(mesh, "post_run")
+        if self.hadLooseGeometry_postRun:
+            fileName_parts = export_name.split(".")
+            new_export_name = fileName_parts[0] + "_no_loose_geometry." + fileName_parts[1]
+            self.export_obj(mesh, new_export_name)
 
     def load_obj(self, obj_file):
         bpy.ops.import_scene.obj(filepath=obj_file, axis_forward='-Z', axis_up='Y', filter_glob="*.obj;*.mtl",
@@ -61,21 +73,57 @@ class Process:
         print('faces: ', mod.face_count, mod.ratio)
         bpy.ops.object.modifier_apply(modifier=mod.name)
 
+#sind die bpy.context.selected_objects[0] aufrufe evtl. schuld an schlechtem reduzieren, da nicht das ganze mesh ausgewählt wird?
+
+#difference between context.scene.objects and context.view_layer.objects
+
     def clean_doubles(self, mesh):
-        vertexCount_before = len(mesh.vertices)
-        bpy.context.scene.objects.active = mesh
+        bpy.context.view_layer.objects.active = mesh
+        vertexCount_before = len(mesh.data.vertices)
         bpy.ops.object.editmode_toggle()
         bpy.ops.mesh.select_all(action='SELECT')
-        bpy.ops.gpencil.stroke_merge_by_distance(threshold=0.001)
+        #bpy.ops.gpencil.stroke_merge_by_distance(threshold=0.001)
+        bpy.ops.mesh.remove_doubles(threshold=0.0001, use_unselected=False)
         bpy.ops.object.editmode_toggle()
 
-        vertexCount_after = len(mesh.vertices)
+        vertexCount_after = len(mesh.data.vertices)
         if vertexCount_after < vertexCount_before:
             print('Remove double vertices for: %s' % mesh.name)
             self.hadDouble_vertices = True
 
     def repair_zeroArea_faces(self, mesh):
-        pass
+        # For now simply apply retriangulation
+        bpy.context.view_layer.objects.active = mesh
+        mod = mesh.modifiers.new(name='Triangulate', type='TRIANGULATE')
+        bpy.ops.object.modifier_apply(modifier=mod.name)
+
+        # Dissolve zero area faces and zero length edges
+        vertexCount_before = len(mesh.data.vertices)
+        bpy.ops.object.editmode_toggle()
+        bpy.ops.mesh.select_all(action='SELECT')
+        bpy.ops.mesh.dissolve_degenerate(threshold=0.0001)
+        bpy.ops.object.editmode_toggle()
+
+        vertexCount_after = len(mesh.data.vertices)
+        if vertexCount_after < vertexCount_before:
+            print('Remove zeroArea faces or edges for: %s' % mesh.name)
+            self.hadZeroArea_edges_or_faces = True
+
+    def delete_looseGeometry(self, mesh, indicator):
+        bpy.context.view_layer.objects.active = mesh
+        vertexCount_before = len(mesh.data.vertices)
+        bpy.ops.object.editmode_toggle()
+        bpy.ops.mesh.select_all(action='SELECT')
+        bpy.ops.mesh.delete_loose(use_verts=True, use_edges=True, use_faces=True)
+        bpy.ops.object.editmode_toggle()
+
+        vertexCount_after = len(mesh.data.vertices)
+        if vertexCount_after < vertexCount_before:
+            print('Remove loose geometry at ' + indicator + ' for: %s' % mesh.name)
+            if indicator == "initial_run":
+                self.hadLooseGeometry_initialRun = True
+            if indicator == "post_run":
+                self.hadLooseGeometry_postRun = True
 
     def export_obj(self, mesh, export_name):
         outpath = os.path.dirname(export_name)
