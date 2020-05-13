@@ -1,0 +1,8 @@
+# mesh viewer:
+.\meshconv.exe .\ModelNet10\ModelNet10\desk\test\desk_0201.off -c obj -o desk_0201.obj
+
+# mesh pre-processing examples:
+D:\Windows\Programme\Blender\blender.exe --background --python \scripts\dataprep\blender_process.py ico.obj 335 .\ico335.obj
+D:\Windows\Programme\Blender\blender.exe --background --python .\scripts\dataprep\blender_convertToOBJ.py -- .\datasets\Style_Datasets_adjusted\ 500 .\datasets -
+D:\Windows\Programme\Blender\blender.exe --background --python .\scripts\dataprep\blender_convertToOBJ.py -- .\datasets\shrec_16 2000 .\datasets tt
+# the extra " -- " are for blender to stop parsing arguments after
