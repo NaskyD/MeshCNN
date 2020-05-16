@@ -43,10 +43,25 @@ class MeshPool(nn.Module):
         queue = self.__build_queue(self.__fe[mesh_index, :, :mesh.edges_count], mesh.edges_count)
         # recycle = []
         # last_queue_len = len(queue)
-        last_count = mesh.edges_count + 1
+        # last_count = mesh.edges_count + 1
         mask = np.ones(mesh.edges_count, dtype=np.bool)
         edge_groups = MeshUnion(mesh.edges_count, self.__fe.device)
         while mesh.edges_count > self.__out_target:
+            """
+            In case the geometry is "too brocken" after previous pooling layer and not enough valid edges are available anymore:
+            - add new dummy edges
+            """
+            if len(queue) == 0:
+                """
+                edge_features = np.pad(input_arr, pad_width=npad, mode='constant', constant_values=0)
+                # adjust mask to incorporate new padded edges
+                #...mask
+                # adjust indices to incorporate new padded edges
+                #...indices
+                # push to device
+                edge_features = input_edge_features.to(self.device).requires_grad_(self.is_train)
+                """
+                pass
             value, edge_id = heappop(queue)
             edge_id = int(edge_id)
             if mask[edge_id]:
