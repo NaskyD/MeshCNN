@@ -1,8 +1,14 @@
 # mesh viewer:
 .\meshconv.exe .\ModelNet10\ModelNet10\desk\test\desk_0201.off -c obj -o desk_0201.obj
 
+# visualisation:
+tensorboard --logdir=. --host=localhost --port=6006
+
 # mesh pre-processing examples:
 D:\Windows\Programme\Blender\blender.exe --background --python \scripts\dataprep\blender_process.py ico.obj 335 .\ico335.obj
 D:\Windows\Programme\Blender\blender.exe --background --python .\scripts\dataprep\blender_convertToOBJ.py -- .\datasets\Style_Datasets_adjusted\ 500 .\datasets -
 D:\Windows\Programme\Blender\blender.exe --background --python .\scripts\dataprep\blender_convertToOBJ.py -- .\datasets\shrec_16 2000 .\datasets tt
 # the extra " -- " are for blender to stop parsing arguments after
+
+#training:
+python train.py --dataroot datasets/#####_DataSet_##### --name #####_NAME_##### --ncf 64 128 256 256 --pool_res 1600 1300 1000 700 --norm group --resblocks 1 --flip_edges 0.2 --slide_verts 0.2 --num_aug 20 --niter_decay 100 --ninput_edges 2200 --dataset_mode classification --gpu_ids 0 --export_folder ./meshes
